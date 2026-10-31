@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Hibr Writing Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Naskh+Arabic:wght@400;600&family=Source+Serif+4:wght@400;600&family=Reem+Kufi:wght@600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+/* Layout: a cinema strip on top (video + chapters), then the writing desk (editor beside corrections), then a shelf of related ideas.
+   One palette for both themes: indigo ink, a highlighter-yellow marker for mistakes, mint for "all good". */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #e8ecf4;
+  --ink: #14192b;
+  --ink-soft: #566079;
+  --line: #d6dce9;
+  --primary: #3d4fd6;
+  --primary-ink: #ffffff;
+  --marker: #ffe58a;
+  --marker-ink: #2d2400;
+  --ok: #0c8f6e;
+  --stage: #0f1424;
+  --stage-2: #1a2138;
+  --stage-ink: #eaeefb;
+  --stage-soft: #9aa6c6;
+  --stage-line: #2a3452;
+  --font-ui: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-brand: "Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+:root[lang="ar"] { --font-read: "Noto Naskh Arabic", "IBM Plex Sans Arabic", serif; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1020; --surface: #151b2f; --surface-2: #1e2642; --ink: #e8ecf8; --ink-soft: #9ba6c4; --line: #2a3354;
+    --primary: #8e9bff; --primary-ink: #0b1030; --marker: #5e4f10; --marker-ink: #fff1b8; --ok: #3ddcb5;
+    --stage: #070a15; --stage-2: #141a2e; --stage-line: #252e4b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1020; --surface: #151b2f; --surface-2: #1e2642; --ink: #e8ecf8; --ink-soft: #9ba6c4; --line: #2a3354;
+  --primary: #8e9bff; --primary-ink: #0b1030; --marker: #5e4f10; --marker-ink: #fff1b8; --ok: #3ddcb5;
+  --stage: #070a15; --stage-2: #141a2e; --stage-line: #252e4b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 16px; line-height: 1.6;
+  padding-block: 18px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin-inline: auto; display: grid; gap: 22px; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+.brand h1 { font-family: var(--font-brand); font-size: 1.7rem; line-height: 1.1; margin: 0; letter-spacing: .02em; }
+.brand p { margin: 0; font-size: .875rem; color: var(--ink-soft); }
+.tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.seg { display: flex; gap: 3px; padding: 3px; background: var(--surface-2); border-radius: 11px; }
+.seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; font-weight: 500; color: var(--ink-soft); }
+.seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; }
+.icon-btn svg[hidden] { display: none; }
+.icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* stage */
+.stage { background: var(--stage); color: var(--stage-ink); border-radius: 18px; padding: 16px; display: grid; gap: 20px; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+.screen { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.frame { aspect-ratio: 16 / 9; width: 100%; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+.frame video, .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.empty { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; padding: 16px;
+  background: radial-gradient(120% 90% at 20% 10%, #2b3a8c 0%, transparent 55%), radial-gradient(90% 90% at 90% 100%, #0f6a63 0%, transparent 60%), #0b1022; }
+.empty .play { width: 62px; height: 62px; border-radius: 50%; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); display: grid; place-items: center; }
+.empty .play svg { width: 24px; height: 24px; fill: #fff; margin-inline-start: 3px; }
+.empty h3 { margin: 0; font-size: 1.1rem; color: #fff; }
+.empty p { margin: 0; font-size: .9rem; color: #c6cfee; max-width: 34ch; }
+.src { display: flex; flex-wrap: wrap; gap: 8px; }
+.src input[type="text"] { flex: 1 1 220px; min-width: 0; background: var(--stage-2); border: 1px solid var(--stage-line); color: var(--stage-ink); border-radius: 9px; padding: 8px 12px; }
+.src input::placeholder { color: var(--stage-soft); }
+.src .btn { background: var(--stage-2); border-color: var(--stage-line); color: var(--stage-ink); }
+.src .btn:hover { background: #232c4a; }
+.src .btn.main { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.err { color: #ffb4a8; font-size: .875rem; min-height: 1.3em; margin: 0; }
+
+.info { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.tag { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--stage-soft); display: flex; align-items: center; gap: 8px; }
+.tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff6a5e; }
+.info h2 { margin: 0; font-size: 1.4rem; line-height: 1.3; text-wrap: balance; }
+.info p.desc { margin: 0; color: var(--stage-soft); font-size: .9375rem; }
+.chapters { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.chapters button { width: 100%; display: flex; gap: 12px; align-items: baseline; text-align: start; padding: 8px 10px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--stage-ink); }
+.chapters button:hover { background: var(--stage-2); }
+.chapters button.on { background: var(--stage-2); border-color: var(--primary); }
+.chapters time { font-family: var(--font-mono); font-size: .8rem; color: var(--stage-soft); flex: none; direction: ltr; }
+.chapters button[disabled] { opacity: .5; cursor: default; }
+.hint { margin: 0; font-size: .8125rem; color: var(--stage-soft); }
+
+/* desk */
+.desk { display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr) 330px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.panel h2, .panel h3 { margin: 0; font-size: 1.05rem; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+input#title { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; font-family: var(--font-read); font-size: 1.7rem; font-weight: 600; line-height: 1.3; padding: 4px 0 10px; }
+input#title:focus-visible { outline: none; border-bottom-color: var(--primary); }
+textarea#body { width: 100%; min-height: 420px; resize: vertical; border: 0; background: transparent; font-family: var(--font-read); font-size: 1.125rem; line-height: 1.85; padding: 0; }
+textarea#body:focus-visible { outline: none; }
+:root[lang="ar"] textarea#body, :root[lang="ar"] .reader { font-size: 1.25rem; line-height: 2.1; }
+.reader { font-family: var(--font-read); font-size: 1.125rem; line-height: 1.85; min-height: 420px; }
+.reader h2 { font-family: var(--font-read); font-size: 1.7rem; line-height: 1.3; margin: 0 0 14px; }
+.reader h3 { font-family: var(--font-ui); font-size: 1.1rem; margin: 26px 0 6px; color: var(--primary); }
+.reader p { margin: 0 0 12px; max-width: 68ch; }
+.reader ul { margin: 0 0 12px; padding-inline-start: 22px; max-width: 68ch; }
+mark { background: var(--marker); color: var(--marker-ink); border-radius: 3px; padding: 0 2px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--font-mono); font-size: .75rem; color: var(--ink-soft); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 15px; border-radius: 9px; font-weight: 500; }
+.btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.btn.primary:hover:not(:disabled) { background: var(--primary); filter: brightness(1.1); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.small { padding: 4px 11px; font-size: .875rem; }
+.note { margin: 0; min-height: 1.4em; font-size: .875rem; color: var(--ok); }
+.side { display: grid; gap: 18px; min-width: 0; }
+.status { margin: 0; font-size: .875rem; color: var(--ink-soft); }
+.fixes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 340px; overflow-y: auto; }
+.fix { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; display: grid; gap: 6px; background: var(--bg); }
+.fix .wrong { background: var(--marker); color: var(--marker-ink); border-radius: 3px; padding: 0 4px; }
+.fix .why { font-size: .8125rem; color: var(--ink-soft); }
+.fix .row { align-items: center; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: .9375rem; }
+.checks li { display: flex; gap: 10px; align-items: baseline; }
+.checks li::before { content: ""; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); transform: translateY(1px); }
+.checks li.warn::before { background: #f0b429; border-radius: 2px; }
+
+/* ideas */
+.ideas h2 { margin: 0; font-size: 1.4rem; }
+.ideas > p { margin: 4px 0 0; color: var(--ink-soft); }
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card .k { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--primary); }
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.4; }
+.card p { margin: 0; color: var(--ink-soft); font-size: .9375rem; }
+.card .btn { justify-self: start; margin-top: 4px; }
+
+/* cast on stage */
+.cast-stage { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+.cast-stage figure { margin: 0; display: grid; justify-items: center; gap: 4px; animation: bob 3.2s ease-in-out infinite; }
+.cast-stage figure:nth-child(2) { animation-delay: -1.1s; }
+.cast-stage figure:nth-child(3) { animation-delay: -2.2s; }
+.cast-stage figcaption { font-size: .8rem; color: #dfe6ff; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .cast-stage figure { animation: none; } }
+.cast { display: grid; gap: 8px; margin-top: 6px; }
+.cast .k { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--stage-soft); }
+.cast-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cast-chip { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; background: var(--stage-2); border: 1px solid var(--stage-line); border-radius: 999px; font-size: .875rem; }
+:root[dir="rtl"] .cast-chip { padding: 4px 4px 4px 12px; }
+.cast-chip svg { width: 32px; height: 32px; border-radius: 50%; }
+
+/* characters */
+.chars h2 { margin: 0; font-size: 1.4rem; }
+.chars > p { margin: 4px 0 0; color: var(--ink-soft); }
+.gallery { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); margin-top: 16px; }
+.char { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 8px; justify-items: center; text-align: center; min-width: 0; }
+.char.in { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+.char svg { width: 120px; height: 120px; max-width: 100%; border-radius: 30px; }
+.char h3 { margin: 0; font-size: 1rem; }
+.char p { margin: 0; font-size: .875rem; color: var(--ink-soft); }
+.char .row { justify-content: center; }
+#custom { margin-top: 16px; }
+.custom-grid { display: grid; gap: 22px; grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+.custom-grid .pv svg { width: 100%; max-width: 220px; height: auto; border-radius: 40px; }
+.ctl { display: grid; gap: 14px; min-width: 0; }
+.ctl .two { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.lab { display: grid; gap: 4px; font-size: .8125rem; color: var(--ink-soft); min-width: 0; }
+.inp { width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--ink); }
+.sw { display: flex; flex-wrap: wrap; gap: 8px; }
+.sw button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); padding: 0; }
+.sw button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary); }
+.chk { display: flex; gap: 8px; align-items: center; }
+.chk input { width: 18px; height: 18px; accent-color: var(--primary); }
+.sync .row { align-items: center; }
+.sync form { display: flex; flex-wrap: wrap; gap: 8px; }
+.sync .inp { flex: 1 1 180px; width: auto; }
+@media (max-width: 700px) { .custom-grid { grid-template-columns: minmax(0, 1fr); } .custom-grid .pv { justify-self: center; width: 180px; } }
+
+@media (max-width: 900px) {
+  .stage, .desk { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Hibr <span aria-hidden="true">·</span> حبر</h1>
+      <p data-i18n="tagline"></p>
+    </div>
+    <div class="tools">
+      <nav class="seg" id="langs" aria-label="Language"></nav>
+      <button class="icon-btn" id="theme" type="button" data-i18n-aria="themeLabel">
+        <svg id="icoMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>
+        <svg id="icoSun" viewBox="0 0 24 24" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="stage" aria-labelledby="epTitle">
+    <div class="screen">
+      <div class="frame" id="frame">
+        <div class="empty" id="empty">
+          <div class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg></div>
+          <h3 data-i18n="emptyTitle"></h3>
+          <p data-i18n="emptyText"></p>
+          <div class="cast-stage" id="castStage"></div>
+        </div>
+      </div>
+      <form class="src" id="srcForm">
+        <input type="text" id="url" dir="ltr" data-i18n-ph="urlPh" data-i18n-aria="urlPh">
+        <button class="btn main" type="submit" data-i18n="load"></button>
+        <label class="btn" for="file" data-i18n="chooseFile" style="cursor:pointer"></label>
+        <input type="file" id="file" accept="video/*" hidden>
+      </form>
+      <p class="err" id="vidErr" role="status"></p>
+    </div>
+    <div class="info">
+      <span class="tag" data-i18n="stageTag"></span>
+      <h2 id="epTitle"></h2>
+      <p class="desc" id="epDesc"></p>
+      <ul class="chapters" id="chapters"></ul>
+      <p class="hint" id="chapNote"></p>
+      <div class="cast"><span class="k" data-i18n="castTitle"></span><div class="cast-chips" id="castChips"></div></div>
+    </div>
+  </section>
+
+  <div class="desk">
+    <section class="panel" aria-label="Article">
+      <div class="bar">
+        <div class="seg" role="tablist" id="tabs">
+          <button type="button" role="tab" id="tabWrite" aria-selected="true" data-i18n="tabWrite"></button>
+          <button type="button" role="tab" id="tabRead" aria-selected="false" data-i18n="tabRead"></button>
+        </div>
+        <div class="meta"><span id="count"></span></div>
+      </div>
+      <input type="text" id="title" dir="auto" data-i18n-ph="titlePh" data-i18n-aria="titlePh">
+      <textarea id="body" dir="auto" spellcheck="true" data-i18n-ph="bodyPh" data-i18n-aria="bodyPh"></textarea>
+      <div class="reader" id="reader" dir="auto" hidden></div>
+      <div class="row">
+        <button class="btn primary" id="check" type="button" data-i18n="check"></button>
+        <button class="btn" id="chap" type="button" data-i18n="insertChapters"></button>
+        <button class="btn" id="copy" type="button" data-i18n="copy"></button>
+        <button class="btn" id="reset" type="button" data-i18n="reset"></button>
+      </div>
+      <p class="note" id="note" role="status"></p>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2 data-i18n="corrTitle"></h2>
+        <p class="status" id="corrStatus" role="status"></p>
+        <div class="row"><button class="btn small" id="fixAll" type="button" data-i18n="fixAll" hidden></button></div>
+        <ul class="fixes" id="fixes"></ul>
+      </section>
+      <section class="panel">
+        <h2 data-i18n="styleTitle"></h2>
+        <ul class="checks" id="checks"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <section class="ideas" aria-labelledby="ideasTitle">
+    <h2 id="ideasTitle" data-i18n="ideasTitle"></h2>
+    <p data-i18n="ideasSub"></p>
+    <div class="cards" id="cards"></div>
+  </section>
+  <section class="chars" aria-labelledby="charsTitle">
+    <h2 id="charsTitle" data-i18n="charsTitle"></h2>
+    <p data-i18n="charsSub"></p>
+    <div class="gallery" id="gallery"></div>
+    <div class="panel" id="custom" hidden>
+      <div class="custom-grid">
+        <div class="pv" id="pv"></div>
+        <div class="ctl">
+          <div class="two">
+            <label class="lab"><span data-i18n="cName"></span><input class="inp" id="cName" type="text" dir="auto"></label>
+            <label class="lab"><span data-i18n="cRole"></span><input class="inp" id="cRole" type="text" dir="auto"></label>
+          </div>
+          <div class="lab"><span data-i18n="cSkin"></span><div class="sw" id="swSkin"></div></div>
+          <div class="lab"><span data-i18n="cHair"></span><div class="sw" id="swHair"></div></div>
+          <div class="lab"><span data-i18n="cOutfit"></span><div class="sw" id="swOutfit"></div></div>
+          <div class="lab"><span data-i18n="cBg"></span><div class="sw" id="swBg"></div></div>
+          <label class="chk"><input type="checkbox" id="cAcc"><span id="cAccLabel"></span></label>
+          <div class="lab"><span data-i18n="cMood"></span><div class="seg" id="segMood"></div></div>
+          <div class="row">
+            <button class="btn" id="cDl" type="button" data-i18n="cDl"></button>
+            <button class="btn" id="cReset" type="button" data-i18n="cReset"></button>
+            <button class="btn primary" id="cClose" type="button" data-i18n="cClose"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel sync" id="sync">
+    <h2 data-i18n="syncTitle"></h2>
+    <p class="status" id="syncStatus" role="status"></p>
+    <form id="loginForm" hidden>
+      <input class="inp" id="email" type="email" autocomplete="username" data-i18n-ph="email" data-i18n-aria="email">
+      <input class="inp" id="password" type="password" autocomplete="current-password" data-i18n-ph="password" data-i18n-aria="password">
+      <button class="btn primary" type="submit" data-i18n="signIn"></button>
+    </form>
+    <div class="row">
+      <button class="btn primary" id="saveAll" type="button" data-i18n="saveAll" hidden></button>
+      <button class="btn" id="testConn" type="button" data-i18n="testConn" hidden></button>
+      <button class="btn" id="signOut" type="button" data-i18n="signOut" hidden></button>
+    </div>
+    <p class="note" id="syncNote" role="status"></p>
+  </section>
+</div>
+
+<script>
+/* Online spell checker (LanguageTool). Works from your own website; the quick local rules work everywhere. */
+const CONFIG = { LT_URL: "https://api.languagetool.org/v2/check", SUPABASE_URL: "https://oetsulytfzxadvnfsdxj.supabase.co", SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjaWJlcWZ1ZWlrZGtzcXZoY2ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzNDc5OTYsImV4cCI6MjEwNzkyMzk5Nn0.Xc8ep-jiPcmNbbG0DDiixr_sxrFtw3YoRvDJBboIIp8" };
+
+const LANGS = { ar: { name: "العربية", dir: "rtl" }, fr: { name: "Français", dir: "ltr" }, es: { name: "Español", dir: "ltr" } };
+
+const DATA = {
+ar: {
+  ui: { charsTitle: "شخصيات البودكاست", charsSub: "ست شخصيات هادئة رسمتُها لك بنفسي، بلا حقوق ملكية. خصّصها واختر من يظهر في حلقتك.", customize: "تخصيص", addCast: "أضف إلى الحلقة", inCast: "في الحلقة", castMax: "الحد الأقصى ثلاث شخصيات.", castTitle: "طاقم الحلقة", castEmpty: "اختر شخصيات من الأسفل.",
+    cName: "الاسم", cRole: "الدور", cSkin: "لون البشرة", cHair: "لون الشعر أو غطاء الرأس", cOutfit: "لون الملابس", cBg: "الخلفية", cMood: "التعبير", moods: ["هادئ", "مطمئن", "جادّ"], cDl: "تحميل SVG", cReset: "إعادة الأصل", cClose: "إغلاق",
+    syncTitle: "الحفظ في Supabase", syncDemo: "الوضع التجريبي: كل شيء يُحفظ في هذا المتصفح فقط. أضف رابط Supabase والمفتاح داخل الصفحة لتفعيل الحفظ السحابي.", syncReady: "متصل بـ Supabase. سجّل الدخول لحفظ التغييرات.", syncIn: "تم الدخول. اضغط «حفظ الكل» لرفع المقالات والشخصيات والحلقة.",
+    email: "البريد الإلكتروني", password: "كلمة المرور", signIn: "دخول", signOut: "خروج", saveAll: "حفظ الكل", testConn: "اختبار الاتصال", savedOk: "تم الحفظ في Supabase.", loadedOk: "تم تحميل بياناتك من Supabase.", errPre: "خطأ: ",
+    dUrl: "تعذّر الوصول إلى Supabase. تحقق من الرابط (بدون / في النهاية) ومن مانع الإعلانات.", dTables: "الجداول غير موجودة. شغّل ملف 01_schema.sql في SQL Editor.", dOk: "الاتصال سليم والجداول موجودة.",
+    tagline: "اكتب، دقّق، وانشر مع حلقتك المصوّرة", themeLabel: "تبديل المظهر", stageTag: "بودكاست مصوّر",
+    emptyTitle: "لا يوجد فيديو بعد", emptyText: "ألصق رابط حلقتك أو اختر ملفاً من جهازك.", urlPh: "رابط YouTube أو Vimeo أو ملف mp4", load: "تحميل", chooseFile: "اختيار ملف",
+    vidErr: "تعذّر تشغيل هذا الفيديو. تأكد من الرابط.", chapters: "الفصول", chapNote: "حمّل فيديو لتتنقل بين الفصول بنقرة.",
+    tabWrite: "كتابة", tabRead: "معاينة", titlePh: "عنوان المقالة", bodyPh: "اكتب مقالتك هنا. استخدم ## لعنوان فرعي.",
+    check: "تدقيق إملائي", checking: "جارٍ التدقيق…", fixAll: "تصحيح الكل", insertChapters: "إدراج الفصول", copy: "نسخ المقالة", copied: "تم النسخ.", copyFail: "تعذّر النسخ، حدّد النص وانسخه يدوياً.",
+    reset: "نص تجريبي", resetConfirm: "استبدال نصي؟", inserted: "تمت الإضافة إلى المقالة.", words: "كلمة", min: "د للقراءة",
+    corrTitle: "التصحيحات", corrIdle: "اضغط «تدقيق إملائي» لفحص النص بالكامل.", corrQuick: "{n} تصحيح سريع. اضغط «تدقيق إملائي» للفحص الكامل.", corrFull: "{n} تصحيح مقترح.", corrNone: "لم يُعثر على أخطاء.",
+    corrOffline: "المدقق عبر الإنترنت غير متاح هنا، فطُبّقت القواعد السريعة فقط.", apply: "تطبيق",
+    styleTitle: "جودة النص", lenOk: "الطول مناسب", lenWarn: "النص قصير، أضف مثالاً أو فكرة.", headOk: "العناوين الفرعية موجودة", headWarn: "أضف عناوين فرعية باستخدام ## لتسهيل القراءة.",
+    paraOk: "الفقرات متوازنة", paraWarn: "{n} فقرة طويلة، قسّمها.", sentOk: "الجمل واضحة", sentWarn: "{n} جملة طويلة، اختصرها.",
+    ideasTitle: "أفكار ذات صلة", ideasSub: "اقتراحات عملية لتحويل حلقتك إلى مقالة أقوى. اضغط لإضافتها إلى نصك.", addIdea: "أضف إلى المقالة" },
+  episode: { title: "من الصوت إلى الصفحة", desc: "كيف تحوّل حلقة بودكاست مصوّرة إلى مقالة واضحة: من الفصول إلى المراجعة الإملائية.",
+    chapters: [[0, "المقدمة"], [90, "لماذا نكتب بعد أن نتحدث"], [250, "البدء من الفصول"], [465, "المراجعة والتدقيق"], [620, "الخاتمة"]] },
+  sample: { title: "من الصوت إلى الصفحة: كيف تحوّل حلقتك إلى مقالة",
+    body: "## لماذا نكتب بعد أن نتحدث؟\nالحلقة المصوّرة تصل الى من يحب الاستماع، لكن المقالة تصل إلى من يبحث ويقرأ بسرعة. إذا كتبت ملخص الحلقة بعد تسجيلها فستجد أن أفكارك صارت اكثر ترتيباً ووضوحاً.\n\n## ابدأ من الفصول\nخذ عناوين الفصول التي وضعتها في الفيديو واجعل كل فصل قسماً في المقالة. انا أنصحك بأن تكتب فقرة واحدة لكل فصل، ثم تضيف مثالاً من عندك.\n\n## راجع قبل النشر\nاقرأ النص بصوت عالٍ، وانتبه إلى الجمل الطويلة. ثم شغّل التدقيق الإملائي وصحّح الأخطاء قبل أن تنشر." },
+  ideas: [
+    { k: "افتتاحية", t: "ابدأ بلحظة محددة", d: "ابدأ بالمشهد أو الجملة الأقوى في الحلقة، فيدخل القارئ إلى الموضوع قبل أن يفهم الخطة.", ins: "## الافتتاحية\nاحكِ في جملتين أكثر لحظات الحلقة إثارة للاهتمام." },
+    { k: "اقتباس", t: "اختر جملة تستحق الحفظ", d: "اقتباس قصير قابل للنسخ يصلح عنواناً فرعياً ومنشوراً للتواصل الاجتماعي في آن واحد.", ins: "## ما يستحق التذكّر\n«الصق هنا أقوى جملة في الحلقة.»" },
+    { k: "ملخص", t: "ملخص في أربعين كلمة", d: "اكتبه في النهاية، فهو يصلح وصفاً للفيديو ورسالة إخبارية ولظهور الصفحة في محركات البحث.", ins: "## الملخص\nفي أربعين كلمة: موضوع الحلقة، ولمن هي، وما الذي يخرج به المستمع." },
+    { k: "قائمة", t: "ثلاث أفكار للأخذ معك", d: "قائمة نقطية قصيرة تساعد القارئ المستعجل على أن يقرر هل يكمل القراءة.", ins: "## ثلاث أفكار للأخذ معك\n- الفكرة الأولى\n- الفكرة الثانية\n- الفكرة الثالثة" },
+    { k: "إعادة استخدام", t: "قصّ الحلقة إلى مقاطع قصيرة", d: "يمكن أن يتحول كل فصل إلى مقطع فيديو من ستين ثانية بعنوان خاص به.", ins: "## مقاطع للنشر\n- 00:00 – عنوان المقطع\n- 01:30 – عنوان المقطع" },
+    { k: "مصادر", t: "أضف قسم «للاستزادة»", d: "ثلاثة روابط أو قراءات مكمّلة تزيد قيمة الصفحة وتطيل زمن بقاء الزائر.", ins: "## للاستزادة\n- رابط أو قراءة 1\n- رابط أو قراءة 2" } ],
+  chars: [{ n: "الأستاذ سالم", r: "المعلّم الهادئ", a: "نظارات" }, { n: "العمّ منصور", r: "الفلاّح الحكيم", a: "قبعة القشّ" }, { n: "الجدّة زينب", r: "راوية الحكايات", a: "نظارات" }, { n: "الدكتورة ليلى", r: "الطبيبة المطمئنة", a: "سمّاعة طبية" }, { n: "الحكواتي رشيد", r: "صاحب الأمثال", a: "شارب" }, { n: "المذيعة نور", r: "مقدّمة البودكاست", a: "سمّاعات الرأس" }],
+  rules: [["الى", "إلى"], ["اذا", "إذا"], ["انا", "أنا"], ["اكثر", "أكثر"], ["لاكن", "لكن"], ["هاذا", "هذا"], ["اللذي", "الذي"], ["مسؤل", "مسؤول"], ["انشاء", "إنشاء"], ["اخرى", "أخرى"]]
+},
+fr: {
+  ui: { charsTitle: "Personnages du podcast", charsSub: "Six personnages sereins dessinés pour vous, sans droits d’auteur. Personnalisez-les et choisissez qui apparaît dans votre épisode.", customize: "Personnaliser", addCast: "Ajouter à l’épisode", inCast: "Dans l’épisode", castMax: "Trois personnages maximum.", castTitle: "Équipe de l’épisode", castEmpty: "Choisissez des personnages plus bas.",
+    cName: "Nom", cRole: "Rôle", cSkin: "Teint", cHair: "Couleur des cheveux ou de la coiffe", cOutfit: "Couleur des vêtements", cBg: "Fond", cMood: "Expression", moods: ["Souriant", "Serein", "Neutre"], cDl: "Télécharger en SVG", cReset: "Rétablir l’original", cClose: "Fermer",
+    syncTitle: "Enregistrement Supabase", syncDemo: "Mode démo : tout est enregistré dans ce navigateur seulement. Ajoutez l’URL et la clé Supabase dans la page pour activer la sauvegarde cloud.", syncReady: "Connecté à Supabase. Connectez-vous pour enregistrer.", syncIn: "Connecté. Cliquez sur « Tout enregistrer » pour envoyer articles, personnages et épisode.",
+    email: "E-mail", password: "Mot de passe", signIn: "Connexion", signOut: "Déconnexion", saveAll: "Tout enregistrer", testConn: "Tester la connexion", savedOk: "Enregistré dans Supabase.", loadedOk: "Vos données ont été chargées depuis Supabase.", errPre: "Erreur : ",
+    dUrl: "Supabase est injoignable. Vérifiez l’URL (sans « / » final) et le bloqueur de pubs.", dTables: "Tables introuvables. Exécutez 01_schema.sql dans le SQL Editor.", dOk: "Connexion correcte, tables présentes.",
+    tagline: "Écrivez, corrigez et publiez avec votre épisode filmé", themeLabel: "Changer de thème", stageTag: "Podcast en vidéo",
+    emptyTitle: "Pas encore de vidéo", emptyText: "Collez le lien de votre épisode ou choisissez un fichier sur votre appareil.", urlPh: "Lien YouTube, Vimeo ou fichier .mp4", load: "Charger", chooseFile: "Choisir un fichier",
+    vidErr: "Cette vidéo ne peut pas être lue. Vérifiez le lien.", chapters: "Chapitres", chapNote: "Chargez une vidéo pour naviguer d’un chapitre à l’autre.",
+    tabWrite: "Écrire", tabRead: "Aperçu", titlePh: "Titre de l’article", bodyPh: "Écrivez votre article ici. Utilisez ## pour un intertitre.",
+    check: "Vérifier l’orthographe", checking: "Vérification…", fixAll: "Tout corriger", insertChapters: "Insérer les chapitres", copy: "Copier l’article", copied: "Copié.", copyFail: "Copie impossible, sélectionnez le texte à la main.",
+    reset: "Texte d’exemple", resetConfirm: "Remplacer mon texte ?", inserted: "Ajouté à l’article.", words: "mots", min: "min de lecture",
+    corrTitle: "Corrections", corrIdle: "Cliquez sur « Vérifier l’orthographe » pour analyser tout le texte.", corrQuick: "{n} correction(s) rapide(s). Lancez la vérification complète.", corrFull: "{n} correction(s) proposée(s).", corrNone: "Aucune faute détectée.",
+    corrOffline: "Le correcteur en ligne est inaccessible ici : seules les règles rapides ont été appliquées.", apply: "Appliquer",
+    styleTitle: "Qualité du texte", lenOk: "Longueur correcte", lenWarn: "Texte court : ajoutez un exemple ou une idée.", headOk: "Intertitres présents", headWarn: "Ajoutez des intertitres avec ## pour faciliter la lecture.",
+    paraOk: "Paragraphes équilibrés", paraWarn: "{n} paragraphe(s) trop long(s) : découpez-les.", sentOk: "Phrases claires", sentWarn: "{n} phrase(s) trop longue(s) : raccourcissez-les.",
+    ideasTitle: "Idées associées", ideasSub: "Des pistes concrètes pour tirer un meilleur article de votre épisode. Cliquez pour les ajouter à votre texte.", addIdea: "Ajouter à l’article" },
+  episode: { title: "De la voix à la page", desc: "Comment transformer un podcast filmé en article clair : des chapitres à la relecture orthographique.",
+    chapters: [[0, "Introduction"], [90, "Pourquoi écrire après avoir parlé"], [250, "Partir des chapitres"], [465, "Relecture et correction"], [620, "Conclusion"]] },
+  sample: { title: "De la voix à la page : transformer un épisode en article",
+    body: "## Pourquoi écrire après avoir parlé ?\nL’épisode filmé touche ceux qui aiment écouter, mais l’article touche ceux qui cherchent et lisent vite. Quand on résume l’épisode juste après l’enregistrement, les idées deviennent plus claires, parceque on les remet dans l’ordre.\n\n## Partez des chapitres\nReprenez les titres des chapitres de la vidéo et faites de chacun une section. Écrivez un paragraphe par chapitre, puis ajoutez un exemple qui vient de vous. C’est tout a fait possible en une heure.\n\n## Relisez avant de publier\nLisez le texte à voix haute et repérez les phrases trop longues. Lancez ensuite la correction pour trouver quelquechose que vos yeux ont manqué." },
+  ideas: [
+    { k: "Accroche", t: "Ouvrez avec un moment précis", d: "Commencez par la scène ou la phrase la plus marquante de l’épisode : le lecteur entre dans le sujet avant même de comprendre le plan.", ins: "## L’accroche\nRacontez en deux phrases le moment le plus surprenant de l’épisode." },
+    { k: "Citation", t: "Choisissez une phrase à retenir", d: "Une citation courte et copiable sert à la fois d’intertitre et de publication pour les réseaux.", ins: "## À retenir\n« Collez ici la phrase la plus forte de l’épisode. »" },
+    { k: "Résumé", t: "Un résumé en 40 mots", d: "Écrivez-le en dernier. Il sert de description pour la vidéo, la newsletter et le référencement.", ins: "## Résumé\nEn 40 mots : de quoi parle l’épisode, pour qui, et ce que l’on en retire." },
+    { k: "Liste", t: "Trois idées à emporter", d: "Une courte liste à puces aide le lecteur pressé à décider s’il lit la suite.", ins: "## Trois idées à emporter\n- Première idée\n- Deuxième idée\n- Troisième idée" },
+    { k: "Réutiliser", t: "Découpez en extraits courts", d: "Chaque chapitre peut devenir un extrait vidéo de 60 secondes avec son propre titre.", ins: "## Extraits à publier\n- 00:00 – Titre de l’extrait\n- 01:30 – Titre de l’extrait" },
+    { k: "Ressources", t: "Ajoutez « Pour aller plus loin »", d: "Trois liens ou lectures complémentaires donnent de la valeur à la page et prolongent la visite.", ins: "## Pour aller plus loin\n- Lien ou lecture 1\n- Lien ou lecture 2" } ],
+  chars: [{ n: "M. Salem", r: "L’enseignant paisible", a: "Lunettes" }, { n: "Oncle Mansour", r: "Le fermier sage", a: "Chapeau de paille" }, { n: "Mamie Zineb", r: "La conteuse", a: "Lunettes" }, { n: "Dre Leïla", r: "La médecin rassurante", a: "Stéthoscope" }, { n: "Rachid le conteur", r: "L’homme aux proverbes", a: "Moustache" }, { n: "Nour", r: "L’animatrice du podcast", a: "Casque audio" }],
+  rules: [["parceque", "parce que"], ["quelquechose", "quelque chose"], ["tout\\s+a\\s+fait", "tout à fait"], ["malgrès", "malgré"], ["peutêtre", "peut-être"], ["dévelopement", "développement"], ["developpement", "développement"], ["néanmoin", "néanmoins"], ["evidemment", "évidemment"], ["definitivement", "définitivement"], ["appeller", "appeler"], ["aujourdhui", "aujourd’hui"], ["interressant", "intéressant"]]
+},
+es: {
+  ui: { charsTitle: "Personajes del pódcast", charsSub: "Seis personajes serenos dibujados para ti, sin derechos de autor. Personalízalos y elige quién aparece en tu episodio.", customize: "Personalizar", addCast: "Añadir al episodio", inCast: "En el episodio", castMax: "Máximo tres personajes.", castTitle: "Reparto del episodio", castEmpty: "Elige personajes más abajo.",
+    cName: "Nombre", cRole: "Rol", cSkin: "Tono de piel", cHair: "Color de pelo o tocado", cOutfit: "Color de la ropa", cBg: "Fondo", cMood: "Expresión", moods: ["Sonriente", "Sereno", "Neutral"], cDl: "Descargar SVG", cReset: "Restablecer", cClose: "Cerrar",
+    syncTitle: "Guardado en Supabase", syncDemo: "Modo demo: todo se guarda solo en este navegador. Añade la URL y la clave de Supabase en la página para activar el guardado en la nube.", syncReady: "Conectado a Supabase. Inicia sesión para guardar.", syncIn: "Sesión iniciada. Pulsa «Guardar todo» para subir artículos, personajes y episodio.",
+    email: "Correo", password: "Contraseña", signIn: "Entrar", signOut: "Salir", saveAll: "Guardar todo", testConn: "Probar conexión", savedOk: "Guardado en Supabase.", loadedOk: "Tus datos se cargaron desde Supabase.", errPre: "Error: ",
+    dUrl: "No se puede llegar a Supabase. Revisa la URL (sin « / » final) y el bloqueador de anuncios.", dTables: "No existen las tablas. Ejecuta 01_schema.sql en el SQL Editor.", dOk: "Conexión correcta y tablas presentes.",
+    tagline: "Escribe, corrige y publica junto a tu episodio en vídeo", themeLabel: "Cambiar tema", stageTag: "Pódcast en vídeo",
+    emptyTitle: "Todavía no hay vídeo", emptyText: "Pega el enlace de tu episodio o elige un archivo de tu dispositivo.", urlPh: "Enlace de YouTube, Vimeo o archivo .mp4", load: "Cargar", chooseFile: "Elegir archivo",
+    vidErr: "No se puede reproducir este vídeo. Revisa el enlace.", chapters: "Capítulos", chapNote: "Carga un vídeo para saltar de un capítulo a otro.",
+    tabWrite: "Escribir", tabRead: "Vista previa", titlePh: "Título del artículo", bodyPh: "Escribe aquí tu artículo. Usa ## para un subtítulo.",
+    check: "Revisar ortografía", checking: "Revisando…", fixAll: "Corregir todo", insertChapters: "Insertar capítulos", copy: "Copiar artículo", copied: "Copiado.", copyFail: "No se pudo copiar; selecciona el texto y cópialo a mano.",
+    reset: "Texto de ejemplo", resetConfirm: "¿Reemplazar mi texto?", inserted: "Añadido al artículo.", words: "palabras", min: "min de lectura",
+    corrTitle: "Correcciones", corrIdle: "Pulsa «Revisar ortografía» para analizar todo el texto.", corrQuick: "{n} corrección(es) rápida(s). Lanza la revisión completa.", corrFull: "{n} corrección(es) propuesta(s).", corrNone: "No se encontraron errores.",
+    corrOffline: "El corrector en línea no está disponible aquí: solo se aplicaron las reglas rápidas.", apply: "Aplicar",
+    styleTitle: "Calidad del texto", lenOk: "Longitud adecuada", lenWarn: "Texto corto: añade un ejemplo o una idea.", headOk: "Hay subtítulos", headWarn: "Añade subtítulos con ## para facilitar la lectura.",
+    paraOk: "Párrafos equilibrados", paraWarn: "{n} párrafo(s) demasiado largo(s): divídelos.", sentOk: "Frases claras", sentWarn: "{n} frase(s) demasiado larga(s): acórtalas.",
+    ideasTitle: "Ideas relacionadas", ideasSub: "Pistas concretas para sacar un artículo mejor de tu episodio. Pulsa para añadirlas a tu texto.", addIdea: "Añadir al artículo" },
+  episode: { title: "De la voz a la página", desc: "Cómo convertir un pódcast grabado en vídeo en un artículo claro: de los capítulos a la revisión ortográfica.",
+    chapters: [[0, "Introducción"], [90, "Por qué escribir después de hablar"], [250, "Empezar por los capítulos"], [465, "Revisión y corrección"], [620, "Cierre"]] },
+  sample: { title: "De la voz a la página: convierte tu episodio en artículo",
+    body: "## ¿Por qué escribir después de hablar?\nEl episodio en vídeo llega a quien disfruta escuchando, pero el artículo llega a quien busca y lee rápido. Al resumir el episodio justo después de grabarlo, tus ideas quedan más claras y tambien mejor ordenadas.\n\n## Empieza por los capítulos\nToma los títulos de los capítulos del vídeo y convierte cada uno en una sección. Escribe un párrafo por capítulo y añade un ejemplo propio. Es muy facil hacerlo en una hora.\n\n## Revisa antes de publicar\nLee el texto en voz alta y fíjate en las frases largas. Ademas, pasa el corrector y arregla los errores antes de publicar la pagina." },
+  ideas: [
+    { k: "Gancho", t: "Abre con un momento concreto", d: "Empieza por la escena o la frase más marcada del episodio: el lector entra en el tema antes de entender el esquema.", ins: "## El gancho\nCuenta en dos frases el momento más sorprendente del episodio." },
+    { k: "Cita", t: "Elige una frase para recordar", d: "Una cita corta y copiable sirve a la vez como subtítulo y como publicación para redes.", ins: "## Para recordar\n«Pega aquí la frase más potente del episodio.»" },
+    { k: "Resumen", t: "Un resumen en 40 palabras", d: "Escríbelo al final. Sirve de descripción para el vídeo, el boletín y el posicionamiento en buscadores.", ins: "## Resumen\nEn 40 palabras: de qué trata el episodio, para quién y qué se lleva el oyente." },
+    { k: "Lista", t: "Tres ideas para llevarse", d: "Una lista breve con viñetas ayuda al lector con prisa a decidir si sigue leyendo.", ins: "## Tres ideas para llevarse\n- Primera idea\n- Segunda idea\n- Tercera idea" },
+    { k: "Reutilizar", t: "Corta el episodio en clips", d: "Cada capítulo puede convertirse en un clip de 60 segundos con su propio título.", ins: "## Clips para publicar\n- 00:00 – Título del clip\n- 01:30 – Título del clip" },
+    { k: "Recursos", t: "Añade «Para profundizar»", d: "Tres enlaces o lecturas complementarias dan valor a la página y alargan la visita.", ins: "## Para profundizar\n- Enlace o lectura 1\n- Enlace o lectura 2" } ],
+  chars: [{ n: "Profesor Salem", r: "El maestro sereno", a: "Gafas" }, { n: "Tío Mansour", r: "El agricultor sabio", a: "Sombrero de paja" }, { n: "Abuela Zineb", r: "La cuentacuentos", a: "Gafas" }, { n: "Dra. Leila", r: "La médica tranquilizadora", a: "Estetoscopio" }, { n: "Rachid el narrador", r: "El de los refranes", a: "Bigote" }, { n: "Nour", r: "La presentadora del pódcast", a: "Auriculares" }],
+  rules: [["tambien", "también"], ["ademas", "además"], ["informacion", "información"], ["dificil", "difícil"], ["facil", "fácil"], ["pagina", "página"], ["musica", "música"], ["exito", "éxito"], ["atravez", "a través"], ["deveria", "debería"], ["porfavor", "por favor"], ["tecnologia", "tecnología"], ["capitulo", "capítulo"], ["ultimo", "último"], ["rapido", "rápido"], ["numero", "número"]]
+}
+};
+
+/* ── state ── */
+let chars = [], cast = [], editing = -1, sb = null, session = null;
+let lang = "ar", matches = [], mode = "idle", offline = false, tab = "write", vmode = null, resetArm = 0, checkTok = 0;
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+const D = () => DATA[lang], t = k => D().ui[k] ?? k;
+const fmt = (s, n) => s.replace("{n}", n);
+const wordsOf = s => (s.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) || []).length;
+
+/* ── theme ── */
+function effectiveDark() {
+  const a = document.documentElement.dataset.theme;
+  return a ? a === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function paintThemeIcon() { const d = effectiveDark(); $("icoMoon").hidden = d; $("icoSun").hidden = !d; }
+$("theme").onclick = () => { const n = effectiveDark() ? "light" : "dark"; document.documentElement.dataset.theme = n; store.set("hibr.theme", n); paintThemeIcon(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintThemeIcon);
+
+/* ── i18n ── */
+function applyI18n() {
+  const L = LANGS[lang];
+  document.documentElement.lang = lang; document.documentElement.dir = L.dir;
+  document.querySelectorAll("[data-i18n]").forEach(e => e.textContent = t(e.dataset.i18n));
+  document.querySelectorAll("[data-i18n-ph]").forEach(e => e.placeholder = t(e.dataset.i18nPh));
+  document.querySelectorAll("[data-i18n-aria]").forEach(e => e.setAttribute("aria-label", t(e.dataset.i18nAria)));
+  $("langs").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === lang));
+  $("epTitle").textContent = D().episode.title; $("epDesc").textContent = D().episode.desc;
+  renderChapters(); renderIdeas(); updateAll(); renderGallery(); renderCast(); renderCustomLabels(); syncStatus();
+}
+function setLang(l) { saveDraft(); lang = l; store.set("hibr.lang", l); loadDraft(); matches = localCheck($("body").value); mode = "quick"; applyI18n(); }
+
+/* ── draft ── */
+function drafts() { try { return JSON.parse(store.get("hibr.drafts") || "{}"); } catch { return {}; } }
+function saveDraft() { const d = drafts(); d[lang] = { title: $("title").value, body: $("body").value }; store.set("hibr.drafts", JSON.stringify(d)); }
+function loadDraft() { const d = drafts()[lang] || D().sample; $("title").value = d.title; $("body").value = d.body; }
+
+/* ── quick local rules + online checker ── */
+const B = (s) => new RegExp("(?<![\\p{L}\\p{M}\\p{N}])(" + s + ")(?![\\p{L}\\p{M}\\p{N}])", "giu");
+function localCheck(text) {
+  const out = [];
+  D().rules.forEach(([wrong, right]) => {
+    const re = B(wrong); let m;
+    while ((m = re.exec(text))) {
+      const first = m[0][0], rep = first !== first.toLowerCase() ? right[0].toLocaleUpperCase() + right.slice(1) : right;
+      out.push({ offset: m.index, length: m[0].length, wrong: m[0], replacements: [rep], message: "" });
+    }
+  });
+  return out;
+}
+async function ltCheck(text) {
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 9000);
+  try {
+    const r = await fetch(CONFIG.LT_URL, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ text: text.slice(0, 19000), language: lang }), signal: ctl.signal });
+    if (!r.ok) throw new Error("http " + r.status);
+    const j = await r.json();
+    return j.matches.map(m => ({ offset: m.offset, length: m.length, wrong: text.substr(m.offset, m.length), replacements: (m.replacements || []).slice(0, 3).map(x => x.value), message: m.message || "" }));
+  } finally { clearTimeout(to); }
+}
+function merge(a, b) {
+  const all = [...a, ...b].sort((x, y) => x.offset - y.offset || (y.replacements.length ? 1 : 0) - (x.replacements.length ? 1 : 0));
+  const out = []; let end = -1;
+  all.forEach(m => { if (m.offset >= end) { out.push(m); end = m.offset + m.length; } });
+  return out;
+}
+async function runCheck() {
+  const text = $("body").value, tok = ++checkTok;
+  mode = "busy"; $("check").disabled = true; renderCorr();
+  const local = localCheck(text); let remote = []; offline = false;
+  try { remote = await ltCheck(text); } catch { offline = true; }
+  $("check").disabled = false;
+  if (tok !== checkTok || text !== $("body").value) return;
+  matches = merge(local, remote); mode = "full"; renderCorr(); renderReader();
+}
+function applyMatch(m, rep) {
+  const v = $("body").value;
+  $("body").value = v.slice(0, m.offset) + rep + v.slice(m.offset + m.length);
+  const d = rep.length - m.length;
+  matches = matches.filter(x => x !== m && !(x.offset < m.offset + m.length && x.offset + x.length > m.offset)).map(x => x.offset > m.offset ? { ...x, offset: x.offset + d } : x);
+  saveDraft(); updateAll();
+}
+
+/* ── rendering ── */
+function renderCorr() {
+  const st = $("corrStatus"), ul = $("fixes"); ul.innerHTML = "";
+  let msg;
+  if (mode === "busy") msg = t("checking");
+  else if (mode === "full") msg = matches.length ? fmt(t("corrFull"), matches.length) : t("corrNone");
+  else msg = matches.length ? fmt(t("corrQuick"), matches.length) : t("corrIdle");
+  if (mode === "full" && offline) msg += " " + t("corrOffline");
+  st.textContent = msg;
+  $("fixAll").hidden = !matches.some(m => m.replacements.length);
+  matches.slice(0, 60).forEach(m => {
+    const li = document.createElement("li"); li.className = "fix";
+    const top = document.createElement("div"); top.dir = "auto";
+    const w = document.createElement("span"); w.className = "wrong"; w.textContent = m.wrong; top.appendChild(w); li.appendChild(top);
+    if (m.message) { const why = document.createElement("div"); why.className = "why"; why.textContent = m.message; li.appendChild(why); }
+    if (m.replacements.length) {
+      const row = document.createElement("div"); row.className = "row";
+      m.replacements.forEach(r => { const b = document.createElement("button"); b.type = "button"; b.className = "btn small"; b.textContent = t("apply") + " → " + r; b.dir = "auto"; b.onclick = () => applyMatch(m, r); row.appendChild(b); });
+      li.appendChild(row);
+    }
+    ul.appendChild(li);
+  });
+}
+function renderChecks() {
+  const text = $("body").value, w = wordsOf(text), ul = $("checks"); ul.innerHTML = "";
+  const paras = text.split(/\n\s*\n/).filter(p => p.trim() && !/^##\s/.test(p.trim()));
+  const longP = paras.filter(p => wordsOf(p) > 110).length;
+  const longS = text.split(/(?<=[.!?؟…])\s+/).filter(s => wordsOf(s) > 28).length;
+  const items = [
+    w >= 120 ? [true, t("lenOk")] : [false, t("lenWarn")],
+    (w <= 200 || /^##\s/m.test(text)) ? [true, t("headOk")] : [false, t("headWarn")],
+    longP ? [false, fmt(t("paraWarn"), longP)] : [true, t("paraOk")],
+    longS ? [false, fmt(t("sentWarn"), longS)] : [true, t("sentOk")]
+  ];
+  items.forEach(([ok, msg]) => { const li = document.createElement("li"); if (!ok) li.className = "warn"; li.textContent = msg; ul.appendChild(li); });
+}
+function renderReader() {
+  const box = $("reader"); box.innerHTML = "";
+  const h = document.createElement("h2"); h.textContent = $("title").value; box.appendChild(h);
+  const text = $("body").value; let pos = 0, ul = null;
+  text.split("\n").forEach(line => {
+    const start = pos; pos += line.length + 1;
+    if (!line.trim()) { ul = null; return; }
+    const head = /^##\s+/.test(line), li = /^-\s+/.test(line);
+    const skip = head ? line.match(/^##\s+/)[0].length : li ? line.match(/^-\s+/)[0].length : 0;
+    let el;
+    if (li) { if (!ul) { ul = document.createElement("ul"); box.appendChild(ul); } el = document.createElement("li"); ul.appendChild(el); }
+    else { ul = null; el = document.createElement(head ? "h3" : "p"); box.appendChild(el); }
+    let cur = skip;
+    matches.filter(m => m.offset < start + line.length && m.offset + m.length > start + skip).sort((a, b) => a.offset - b.offset).forEach(m => {
+      const a = Math.max(m.offset - start, cur), b = Math.min(m.offset + m.length - start, line.length);
+      if (b <= a) return;
+      el.append(line.slice(cur, a)); const mk = document.createElement("mark"); mk.textContent = line.slice(a, b); if (m.message) mk.title = m.message; el.append(mk); cur = b;
+    });
+    el.append(line.slice(cur));
+  });
+}
+function updateAll() {
+  const w = wordsOf($("body").value);
+  $("count").textContent = w + " " + t("words") + " · ~" + (w ? Math.max(1, Math.round(w / 200)) : 0) + " " + t("min");
+  renderCorr(); renderChecks(); if (tab === "read") renderReader();
+}
+function setTab(x) {
+  tab = x; $("tabWrite").setAttribute("aria-selected", x === "write"); $("tabRead").setAttribute("aria-selected", x === "read");
+  $("body").hidden = x !== "write"; $("title").hidden = x !== "write"; $("reader").hidden = x !== "read"; if (x === "read") renderReader();
+}
+function renderIdeas() {
+  const box = $("cards"); box.innerHTML = "";
+  D().ideas.forEach(i => {
+    const c = document.createElement("article"); c.className = "card";
+    c.innerHTML = '<span class="k"></span><h3></h3><p></p>';
+    c.children[0].textContent = i.k; c.children[1].textContent = i.t; c.children[2].textContent = i.d;
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn small"; b.textContent = t("addIdea");
+    b.onclick = () => { appendBlock(i.ins); note(t("inserted")); }; c.appendChild(b); box.appendChild(c);
+  });
+}
+function note(msg) { $("note").textContent = msg; clearTimeout(note.t); note.t = setTimeout(() => $("note").textContent = "", 3500); }
+function appendBlock(txt) {
+  const el = $("body"); el.value = el.value.replace(/\s*$/, "") + "\n\n" + txt + "\n"; onType(true);
+}
+function onType(immediate) {
+  saveDraft(); checkTok++;
+  const run = () => { matches = localCheck($("body").value); mode = "quick"; updateAll(); };
+  clearTimeout(onType.t); if (immediate) run(); else { updateCountOnly(); onType.t = setTimeout(run, 500); }
+}
+function updateCountOnly() { const w = wordsOf($("body").value); $("count").textContent = w + " " + t("words") + " · ~" + (w ? Math.max(1, Math.round(w / 200)) : 0) + " " + t("min"); }
+
+/* ── video ── */
+function renderChapters() {
+  const ul = $("chapters"); ul.innerHTML = "";
+  D().episode.chapters.forEach(([s, name]) => {
+    const li = document.createElement("li"), b = document.createElement("button"); b.type = "button"; b.dataset.s = s; b.disabled = !vmode;
+    const tm = document.createElement("time"); tm.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    const nm = document.createElement("span"); nm.textContent = name; b.append(tm, nm); b.onclick = () => seek(s); li.appendChild(b); ul.appendChild(li);
+  });
+  $("chapNote").textContent = vmode ? "" : t("chapNote");
+}
+function mount(el, mode, remember) {
+  const f = $("frame"); f.innerHTML = ""; f.appendChild(el); vmode = mode; $("vidErr").textContent = "";
+  if (remember) store.set("hibr.video", remember);
+  renderChapters();
+}
+function loadVideo(src, remember) {
+  src = src.trim(); if (!src) return;
+  const yt = src.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/), vm = src.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (yt || vm) {
+    const ifr = document.createElement("iframe"); ifr.id = "player"; ifr.title = D().episode.title; ifr.allowFullscreen = true;
+    ifr.allow = "accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen";
+    ifr.src = yt ? "https://www.youtube-nocookie.com/embed/" + yt[1] + "?enablejsapi=1&rel=0" : "https://player.vimeo.com/video/" + vm[1];
+    return mount(ifr, yt ? "yt" : "vimeo", remember ? src : null);
+  }
+  const v = document.createElement("video"); v.controls = true; v.playsInline = true; v.preload = "metadata"; v.src = src;
+  v.onerror = () => { $("vidErr").textContent = t("vidErr"); };
+  v.ontimeupdate = () => { const ch = D().episode.chapters; let on = 0; ch.forEach(([s], i) => { if (v.currentTime >= s) on = i; });
+    $("chapters").querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === on)); };
+  mount(v, "file", remember ? src : null);
+}
+function seek(s) {
+  const p = $("frame").firstElementChild; if (!p) return;
+  if (vmode === "file") { p.currentTime = s; p.play().catch(() => {}); }
+  else if (vmode === "yt") { const w = p.contentWindow; w.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [s, true] }), "*"); w.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: [] }), "*"); }
+  else if (vmode === "vimeo") { const w = p.contentWindow; w.postMessage(JSON.stringify({ method: "setCurrentTime", value: s }), "*"); w.postMessage(JSON.stringify({ method: "play" }), "*"); }
+}
+
+/* ── characters ── */
+const SKIN = ["#f6d5bd", "#e8b996", "#c98b63", "#a8683f", "#7a4a2b", "#563320"];
+const HAIR = ["#2b2430", "#5a4636", "#8b6b4a", "#b8b8c2", "#e7e7ee", "#c9a36a", "#8c3b2e", "#d9b84a"];
+const OUTFIT = ["#3d4fd6", "#0c8f6e", "#c2543d", "#d9a441", "#6b7a99", "#2d3350", "#f4f6fb"];
+const BG = ["#dfe6ff", "#d9f2e9", "#fbe3d6", "#fdf0c9", "#e6dff5", "#d8e8ee"];
+const DEF = [
+  { kind: "teacher", skin: "#e8b996", hair: "#b8b8c2", outfit: "#3d4fd6", bg: "#dfe6ff", acc: true, mood: 0 },
+  { kind: "farmer", skin: "#c98b63", hair: "#d9b84a", outfit: "#0c8f6e", bg: "#d9f2e9", acc: true, mood: 0 },
+  { kind: "grandma", skin: "#f6d5bd", hair: "#c2543d", outfit: "#6b7a99", bg: "#fbe3d6", acc: true, mood: 1 },
+  { kind: "doctor", skin: "#a8683f", hair: "#2b2430", outfit: "#f4f6fb", bg: "#d8e8ee", acc: true, mood: 0 },
+  { kind: "storyteller", skin: "#c98b63", hair: "#5a4636", outfit: "#c2543d", bg: "#fdf0c9", acc: true, mood: 0 },
+  { kind: "host", skin: "#e8b996", hair: "#5a4636", outfit: "#2d3350", bg: "#e6dff5", acc: true, mood: 0 }
+];
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16), c = v => Math.max(0, Math.min(255, Math.round(v * k)));
+  return "#" + ((1 << 24) + (c(n >> 16) << 16) + (c((n >> 8) & 255) << 8) + c(n & 255)).toString(16).slice(1);
+}
+function avatarSVG(c, size, label) {
+  const ink = "#2a2230", sk = c.skin, sd = shade(sk, .82), hair = c.hair, out = c.outfit, brow = "#4a3d38";
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="${size}" height="${size}" role="img" aria-label="${(label || "").replace(/"/g, "")}">`;
+  s += `<rect width="200" height="200" rx="44" fill="${c.bg}"/>`;
+  if (c.kind === "host") s += `<path d="M56 96 C50 36 150 36 144 96 L150 152 L50 152 Z" fill="${hair}"/>`;
+  if (c.kind === "grandma") s += `<path d="M44 152 C38 66 70 36 100 36 C130 36 162 66 156 152 Z" fill="${hair}"/>`;
+  if (c.kind === "doctor") s += `<circle cx="100" cy="40" r="15" fill="${hair}"/>`;
+  s += `<path d="M26 200 C26 152 66 136 100 136 C134 136 174 152 174 200 Z" fill="${out}"/>`;
+  if (c.kind === "teacher") s += `<path d="M84 137 L100 158 L116 137 Z" fill="#fff"/><path d="M96 150 L104 150 L106 176 L100 183 L94 176 Z" fill="#c2543d"/>`;
+  if (c.kind === "farmer") s += `<path d="M70 146 L76 200 M130 146 L124 200" stroke="${shade(out, .7)}" stroke-width="10" fill="none"/>`;
+  if (c.kind === "doctor") s += `<path d="M86 138 L100 162 L114 138 Z" fill="#6fb3b8"/><path d="M84 138 L100 168 M116 138 L100 168" stroke="${shade(out, .85)}" stroke-width="3" fill="none"/>`;
+  s += `<rect x="88" y="112" width="24" height="30" rx="10" fill="${sd}"/>`;
+  s += `<circle cx="64" cy="92" r="7" fill="${sk}"/><circle cx="136" cy="92" r="7" fill="${sk}"/>`;
+  s += `<ellipse cx="100" cy="88" rx="36" ry="40" fill="${sk}"/>`;
+  s += `<circle cx="76" cy="102" r="6" fill="#e07a7a" opacity=".18"/><circle cx="124" cy="102" r="6" fill="#e07a7a" opacity=".18"/>`;
+  // top of head
+  const crown = `<path d="M64 84 C60 48 90 42 100 42 C122 42 140 52 136 84 C128 68 114 62 100 62 C86 62 72 68 64 84 Z" fill="${hair}"/>`;
+  if (c.kind === "teacher" || c.kind === "doctor") s += crown;
+  if (c.kind === "host") s += `<path d="M64 86 C60 48 140 48 136 86 C128 70 116 62 100 62 C84 62 72 70 64 86 Z" fill="${hair}"/>`;
+  if (c.kind === "grandma") s += `<path d="M60 94 C54 52 146 52 140 94 C134 72 118 66 100 66 C82 66 66 72 60 94 Z" fill="${hair}"/>`;
+  if (c.kind === "storyteller") s += `<path d="M62 74 C60 44 140 44 138 74 Z" fill="${hair}"/><path d="M60 72 H148 C148 79 104 80 60 76 Z" fill="${shade(hair, .75)}"/>`;
+  if (c.kind === "farmer") {
+    if (c.acc) s += `<path d="M68 62 C64 28 136 28 132 62 Z" fill="${shade(hair, 1.12)}"/><rect x="67" y="51" width="66" height="8" fill="${shade(hair, .55)}"/><ellipse cx="100" cy="63" rx="66" ry="13" fill="${hair}"/>`;
+    else s += crown;
+  }
+  // brows, eyes, nose, mouth
+  s += `<path d="M77 80 q9 -5 17 0 M106 80 q9 -5 17 0" stroke="${brow}" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+  if (c.mood === 1) s += `<path d="M79 90 q7 6 14 0 M107 90 q7 6 14 0" stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+  else s += `<circle cx="86" cy="90" r="3.4" fill="${ink}"/><circle cx="114" cy="90" r="3.4" fill="${ink}"/>`;
+  s += `<path d="M100 93 q-4 9 1 12" stroke="${sd}" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+  s += c.mood === 2 ? `<path d="M91 112 h18" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>` : c.mood === 1 ? `<path d="M91 111 q9 6 18 0" stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none"/>` : `<path d="M88 110 q12 10 24 0" stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none"/>`;
+  // accessories
+  if (c.acc) {
+    if (c.kind === "teacher") s += `<g fill="none" stroke="#2b2b3a" stroke-width="3"><circle cx="86" cy="90" r="11"/><circle cx="114" cy="90" r="11"/><path d="M97 90 h6"/></g>`;
+    if (c.kind === "grandma") s += `<g fill="none" stroke="#b88a3c" stroke-width="2.6"><circle cx="86" cy="91" r="10"/><circle cx="114" cy="91" r="10"/><path d="M96 91 h8"/></g>`;
+    if (c.kind === "doctor") s += `<path d="M78 140 C74 174 126 174 122 140" stroke="#37475a" stroke-width="4" fill="none"/><circle cx="100" cy="172" r="6" fill="#9fb0c4" stroke="#37475a" stroke-width="3"/>`;
+    if (c.kind === "storyteller") s += `<path d="M85 105 C92 98 100 102 100 104 C100 102 108 98 115 105 C108 112 100 108 100 108 C100 108 92 112 85 105 Z" fill="#4a3d38"/>`;
+    if (c.kind === "host") s += `<path d="M56 92 C52 34 148 34 144 92" stroke="#2d3350" stroke-width="6" fill="none"/><rect x="47" y="84" width="15" height="28" rx="7" fill="#e5645a"/><rect x="138" y="84" width="15" height="28" rx="7" fill="#e5645a"/><path d="M54 108 C58 130 80 128 92 120" stroke="#2d3350" stroke-width="3" fill="none"/><circle cx="94" cy="119" r="5" fill="#2d3350"/>`;
+  }
+  return s + `</svg>`;
+}
+function loadChars() {
+  let saved = []; try { saved = JSON.parse(store.get("hibr.chars") || "[]"); } catch {}
+  return DEF.map((d, i) => ({ ...d, ...(saved[i] || {}), kind: d.kind }));
+}
+function loadCast() { try { const c = JSON.parse(store.get("hibr.cast") || "null"); return Array.isArray(c) ? c.filter(i => i >= 0 && i < 6).slice(0, 3) : [0, 5]; } catch { return [0, 5]; } }
+function saveChars() { store.set("hibr.chars", JSON.stringify(chars.map(({ kind, ...r }) => r))); store.set("hibr.cast", JSON.stringify(cast)); }
+const cname = i => chars[i].name || D().chars[i].n, crole = i => chars[i].role || D().chars[i].r;
+
+function renderGallery() {
+  const g = $("gallery"); g.innerHTML = "";
+  chars.forEach((c, i) => {
+    const el = document.createElement("article"); el.className = "char" + (cast.includes(i) ? " in" : "");
+    el.innerHTML = avatarSVG(c, 120, cname(i)) + "<h3></h3><p></p>";
+    el.querySelector("h3").textContent = cname(i); el.querySelector("p").textContent = crole(i);
+    const row = document.createElement("div"); row.className = "row";
+    const a = document.createElement("button"); a.type = "button"; a.className = "btn small"; a.textContent = t("customize"); a.onclick = () => openCustom(i);
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn small" + (cast.includes(i) ? " primary" : ""); b.textContent = cast.includes(i) ? t("inCast") : t("addCast");
+    b.onclick = () => toggleCast(i); row.append(a, b); el.appendChild(row); g.appendChild(el);
+  });
+}
+function toggleCast(i) {
+  if (cast.includes(i)) cast = cast.filter(x => x !== i);
+  else { if (cast.length >= 3) { note(t("castMax")); return; } cast.push(i); }
+  saveChars(); renderGallery(); renderCast();
+}
+function renderCast() {
+  const st = $("castStage"), ch = $("castChips"); st.innerHTML = ""; ch.innerHTML = "";
+  cast.forEach(i => {
+    const f = document.createElement("figure"); f.innerHTML = avatarSVG(chars[i], 84, cname(i)); const cap = document.createElement("figcaption"); cap.textContent = cname(i); f.appendChild(cap); st.appendChild(f);
+    const chip = document.createElement("span"); chip.className = "cast-chip"; chip.innerHTML = avatarSVG(chars[i], 32, cname(i)); chip.append(cname(i)); ch.appendChild(chip);
+  });
+  if (!cast.length) { const e = document.createElement("span"); e.className = "hint"; e.textContent = t("castEmpty"); ch.appendChild(e); }
+}
+function swatches(id, list, key) {
+  const box = $(id); box.innerHTML = "";
+  list.forEach(col => { const b = document.createElement("button"); b.type = "button"; b.style.background = col; b.setAttribute("aria-label", col); b.setAttribute("aria-pressed", chars[editing][key] === col);
+    b.onclick = () => { chars[editing][key] = col; afterEdit(); }; box.appendChild(b); });
+}
+function renderCustomLabels() {
+  if (editing < 0) return;
+  $("cName").placeholder = D().chars[editing].n; $("cRole").placeholder = D().chars[editing].r; $("cAccLabel").textContent = D().chars[editing].a;
+  const seg = $("segMood"); seg.innerHTML = "";
+  t("moods").forEach((m, k) => { const b = document.createElement("button"); b.type = "button"; b.textContent = m; b.setAttribute("aria-pressed", chars[editing].mood === k); b.onclick = () => { chars[editing].mood = k; afterEdit(); }; seg.appendChild(b); });
+}
+function paintCustom() {
+  const c = chars[editing];
+  $("pv").innerHTML = avatarSVG(c, 220, cname(editing));
+  swatches("swSkin", SKIN, "skin"); swatches("swHair", HAIR, "hair"); swatches("swOutfit", OUTFIT, "outfit"); swatches("swBg", BG, "bg");
+  $("cAcc").checked = !!c.acc; renderCustomLabels();
+}
+function openCustom(i) {
+  editing = i; $("custom").hidden = false; $("cName").value = chars[i].name || ""; $("cRole").value = chars[i].role || "";
+  paintCustom(); $("custom").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function afterEdit() { saveChars(); paintCustom(); renderGallery(); renderCast(); }
+function downloadSvg() {
+  const c = chars[editing]; const svg = '<?xml version="1.0" encoding="UTF-8"?>\n' + avatarSVG(c, 512, cname(editing));
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })); const a = document.createElement("a");
+  a.href = url; a.download = "hibr-" + c.kind + ".svg"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ── Supabase sync ── */
+function syncStatus() {
+  const st = $("syncStatus"); if (!st) return;
+  $("loginForm").hidden = !sb || !!session; $("saveAll").hidden = !sb || !session; $("signOut").hidden = !sb || !session; $("testConn").hidden = !sb;
+  st.textContent = !sb ? t("syncDemo") : session ? t("syncIn") : t("syncReady");
+}
+const sbNote = (m, bad) => { const n = $("syncNote"); n.textContent = m; n.style.color = bad ? "var(--marker-ink)" : ""; n.style.background = bad ? "var(--marker)" : ""; };
+async function pull() {
+  const [c, a, e] = await Promise.all([sb.from("characters").select("*"), sb.from("articles").select("*"), sb.from("episode").select("*").eq("id", 1).maybeSingle()]);
+  if (c.error || a.error || e.error) throw (c.error || a.error || e.error);
+  let any = false;
+  (c.data || []).forEach(r => { const i = r.slot - 1; if (i >= 0 && i < 6) { chars[i] = { ...DEF[i], ...(r.cfg || {}), name: r.name || null, role: r.role || null, kind: DEF[i].kind }; any = true; } });
+  if (e.data) { if (Array.isArray(e.data.cast_slots)) cast = e.data.cast_slots.map(x => x - 1).filter(x => x >= 0 && x < 6).slice(0, 3); if (e.data.video_url) { $("url").value = e.data.video_url; loadVideo(e.data.video_url, true); } any = true; }
+  const d = drafts(); (a.data || []).forEach(r => { if (LANGS[r.lang]) { d[r.lang] = { title: r.title || "", body: r.body || "" }; any = true; } });
+  store.set("hibr.drafts", JSON.stringify(d)); saveChars();
+  loadDraft(); matches = localCheck($("body").value); mode = "quick"; applyI18n();
+  return any;
+}
+async function push() {
+  saveDraft(); const d = drafts(), tasks = [];
+  tasks.push(sb.from("characters").upsert(chars.map((c, i) => { const { kind, name, role, ...cfg } = c; return { slot: i + 1, name: name || null, role: role || null, cfg, updated_at: new Date().toISOString() }; })));
+  const rows = Object.keys(d).filter(l => LANGS[l]).map(l => ({ lang: l, title: d[l].title, body: d[l].body, updated_at: new Date().toISOString() }));
+  if (rows.length) tasks.push(sb.from("articles").upsert(rows));
+  tasks.push(sb.from("episode").upsert({ id: 1, video_url: store.get("hibr.video") || null, cast_slots: cast.map(i => i + 1), updated_at: new Date().toISOString() }));
+  const res = await Promise.all(tasks); const bad = res.find(r => r.error); if (bad) throw bad.error;
+}
+async function testConn() {
+  sbNote("…");
+  try { const r = await sb.from("characters").select("slot").limit(1);
+    if (r.error) { sbNote(/relation|schema cache|does not exist|PGRST205|42P01/i.test(r.error.message + (r.error.code || "")) ? t("dTables") : t("errPre") + r.error.message, true); }
+    else sbNote(t("dOk"));
+  } catch { sbNote(t("dUrl"), true); }
+}
+function initSupabase() {
+  const ok = CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY && window.supabase; if (!ok) return;
+  sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  sb.auth.getSession().then(r => { session = r.data.session; syncStatus(); });
+  sb.auth.onAuthStateChange((_e, s) => { session = s; syncStatus(); });
+  $("loginForm").addEventListener("submit", async e => { e.preventDefault(); const { error } = await sb.auth.signInWithPassword({ email: $("email").value, password: $("password").value }); if (error) sbNote(t("errPre") + error.message, true); else sbNote(""); });
+  $("signOut").onclick = () => sb.auth.signOut(); $("testConn").onclick = testConn;
+  $("saveAll").onclick = async () => { sbNote("…"); try { await push(); sbNote(t("savedOk")); } catch (e) { sbNote(t("errPre") + (e.message || e), true); } };
+  pull().then(any => { if (any) sbNote(t("loadedOk")); }).catch(e => sbNote(/relation|schema cache|PGRST205|42P01/i.test((e.message || "") + (e.code || "")) ? t("dTables") : t("errPre") + (e.message || e), true));
+  syncStatus();
+}
+
+/* ── events ── */
+function init() {
+  Object.entries(LANGS).forEach(([k, v]) => { const b = document.createElement("button"); b.type = "button"; b.dataset.l = k; b.lang = k; b.textContent = v.name; b.onclick = () => setLang(k); $("langs").appendChild(b); });
+  const th = store.get("hibr.theme"); if (th === "light" || th === "dark") document.documentElement.dataset.theme = th; paintThemeIcon();
+  const saved = store.get("hibr.lang"), nav = (navigator.language || "ar").slice(0, 2);
+  lang = LANGS[saved] ? saved : (LANGS[nav] ? nav : "ar");
+  chars = loadChars(); cast = loadCast(); loadDraft();
+  $("cName").addEventListener("input", e => { chars[editing].name = e.target.value.trim() || null; saveChars(); renderGallery(); renderCast(); $("pv").innerHTML = avatarSVG(chars[editing], 220, cname(editing)); });
+  $("cRole").addEventListener("input", e => { chars[editing].role = e.target.value.trim() || null; saveChars(); renderGallery(); });
+  $("cAcc").addEventListener("change", e => { chars[editing].acc = e.target.checked; afterEdit(); });
+  $("cClose").onclick = () => { $("custom").hidden = true; editing = -1; };
+  $("cReset").onclick = () => { chars[editing] = { ...DEF[editing] }; $("cName").value = ""; $("cRole").value = ""; afterEdit(); };
+  $("cDl").onclick = downloadSvg;
+  $("body").addEventListener("input", () => onType(false)); $("title").addEventListener("input", () => { saveDraft(); if (tab === "read") renderReader(); });
+  $("tabWrite").onclick = () => setTab("write"); $("tabRead").onclick = () => setTab("read");
+  $("check").onclick = runCheck; $("fixAll").onclick = () => { [...matches].filter(m => m.replacements.length).sort((a, b) => b.offset - a.offset).forEach(m => applyMatch(m, m.replacements[0])); };
+  $("chap").onclick = () => { appendBlock(D().episode.chapters.map(c => "## " + c[1]).join("\n\n")); note(t("inserted")); };
+  $("copy").onclick = async () => {
+    const txt = $("title").value + "\n\n" + $("body").value;
+    try { await navigator.clipboard.writeText(txt); note(t("copied")); } catch { setTab("write"); $("body").focus(); $("body").select(); note(t("copyFail")); }
+  };
+  $("reset").onclick = () => {
+    if (Date.now() - resetArm > 3000) { resetArm = Date.now(); $("reset").textContent = t("resetConfirm"); setTimeout(() => $("reset").textContent = t("reset"), 3000); return; }
+    resetArm = 0; $("reset").textContent = t("reset"); $("title").value = D().sample.title; $("body").value = D().sample.body; matches = []; mode = "idle"; saveDraft(); updateAll();
+  };
+  $("srcForm").addEventListener("submit", e => { e.preventDefault(); loadVideo($("url").value, true); });
+  $("file").addEventListener("change", e => { const f = e.target.files[0]; if (f) loadVideo(URL.createObjectURL(f), false); });
+  const v = store.get("hibr.video"); if (v) { $("url").value = v; loadVideo(v, false); }
+  applyI18n(); matches = localCheck($("body").value); mode = "quick"; updateAll();
+  initSupabase();
+}
+init();
+</script>
+
+</body>
+</html>
