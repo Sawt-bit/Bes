@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>صوت · بودكاست</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f7f1e8;--surface:#fffdf9;--s2:#efe5d6;--ink:#2a1d14;--soft:#6f5d4e;--line:#e0d2bf;--accent:#b4531f;--ai:#fff;--f:"IBM Plex Sans Arabic",system-ui,sans-serif;--fd:"Reem Kufi","IBM Plex Sans Arabic",sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#17110c;--surface:#201812;--s2:#2b2118;--ink:#f3e9dc;--soft:#b3a18e;--line:#3a2d22;--accent:#e08a4f;--ai:#2a1405;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.7 var(--f);padding-bottom:120px}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:900px;margin:auto;padding:0 16px;padding-inline:max(16px,env(safe-area-inset-left,0px))}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0;padding-top:calc(18px + env(safe-area-inset-top,0px))}
+.brand{font:600 1.7rem var(--fd)}.brand i{color:var(--accent);font-style:normal}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 16px;border-radius:99px;cursor:pointer;font-weight:500}
+.btn:hover{background:var(--s2)}.btn.p{background:var(--accent);border-color:var(--accent);color:var(--ai)}.btn.p:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.5}.btn.sm{padding:3px 12px;font-size:.8125rem}
+.hero{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px;margin-bottom:28px}
+@media(max-width:640px){.hero{grid-template-columns:1fr}}
+.cov{aspect-ratio:1;border-radius:18px;overflow:hidden;display:grid;place-items:center;color:#fff;font:600 3.5rem var(--fd);background:linear-gradient(135deg,hsl(var(--h) 55% 38%),hsl(calc(var(--h) + 40) 60% 28%))}
+.cov img{width:100%;height:100%;object-fit:cover}
+.tag{font-size:.75rem;letter-spacing:.08em;color:var(--accent);font-weight:600}
+.hero h1{font:600 1.8rem/1.3 var(--fd);margin:4px 0 8px}
+.hero p{margin:0 0 14px;color:var(--soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.bar{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.bar h2{font:600 1.3rem var(--fd);margin:0;flex:1}
+.bar input{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:6px 14px;width:min(220px,50%)}
+.ep{display:grid;grid-template-columns:72px 1fr auto;gap:14px;align-items:center;padding:12px;border-radius:16px;cursor:pointer;border:1px solid transparent}
+.ep:hover{background:var(--surface)}.ep.now{background:var(--surface);border-color:var(--accent)}
+.ep .cov{font-size:1.5rem;border-radius:12px}
+.ep h3{margin:0;font-size:1rem;line-height:1.4}.meta{color:var(--soft);font-size:.8125rem}
+.ep .pb{width:42px;height:42px;border-radius:50%;border:0;background:var(--accent);color:var(--ai);cursor:pointer}
+.empty{text-align:center;color:var(--soft);padding:48px 0}
+#pl{position:fixed;inset:auto 0 0 0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:grid;gap:6px}
+#pl[hidden]{display:none}
+.pi{max-width:900px;margin:auto;width:100%;display:grid;gap:6px}
+.pr{display:flex;align-items:center;gap:8px}.pr .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.pr button{border:0;background:var(--s2);border-radius:99px;padding:4px 12px;cursor:pointer}
+#pp{background:var(--accent);color:var(--ai);width:44px;height:44px;padding:0;font-size:1.1rem}
+.sk{display:flex;align-items:center;gap:10px;font-size:.75rem;color:var(--soft)}
+#seek{flex:1;accent-color:var(--accent)}
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);width:min(480px,92vw);padding:0}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+form{display:grid;gap:10px;padding:20px}form h2{margin:0;font-family:var(--fd)}
+form input,form textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+form label{font-size:.8125rem;color:var(--soft);display:grid;gap:3px}
+.row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.msg{min-height:1.3em;font-size:.875rem;color:var(--accent)}
+.adm{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:.875rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="brand">صوت<i>.</i></div><button class="btn sm" id="adminBtn">دخول المشرف</button></header>
+  <section id="hero"></section>
+  <div class="bar"><h2>كل الحلقات</h2><input id="q" type="search" placeholder="ابحث…" aria-label="بحث"></div>
+  <div id="list"></div>
+</div>
+
+<div id="pl" hidden><div class="pi">
+  <div class="pr"><button id="pp" aria-label="تشغيل">▶</button><span class="t" id="pt"></span>
+    <button id="b15">−15</button><button id="f30">+30</button><button id="spd">1×</button><button id="share" aria-label="نسخ الرابط">🔗</button></div>
+  <div class="sk"><span id="tc">0:00</span><input id="seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="التقدم"><span id="td">0:00</span></div>
+</div></div>
+<audio id="au" preload="metadata"></audio>
+
+<dialog id="dlg"><form id="lf" hidden><h2>دخول المشرف</h2>
+  <label>البريد<input id="em" type="email" required autocomplete="username"></label>
+  <label>كلمة المرور<input id="pw" type="password" required autocomplete="current-password"></label>
+  <div class="msg" id="lm"></div><div class="row"><button class="btn" type="button" data-x>إغلاق</button><button class="btn p">دخول</button></div></form>
+  <form id="uf" hidden><h2>حلقة جديدة</h2>
+  <label>العنوان<input id="ut" required maxlength="140"></label>
+  <label>الوصف<textarea id="ud" rows="3"></textarea></label>
+  <label>ملف الصوت (mp3 / m4a)<input id="ua" type="file" accept="audio/*" required></label>
+  <label>غلاف الحلقة (اختياري)<input id="uc" type="file" accept="image/*"></label>
+  <div class="msg" id="um"></div>
+  <div class="row"><button class="btn" type="button" id="out">خروج</button><button class="btn" type="button" data-x>إغلاق</button><button class="btn p" id="ub">نشر</button></div>
+  <div id="al"></div></form></dialog>
+
+<script>
+const CONFIG={URL:"https://oetsulytfzxadvnfsdxj.supabase.co",KEY:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ldHN1bHl0Znp4YWR2bmZzZHhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMjk3MDksImV4cCI6MjEwODcwNTcwOX0.nVkB7YR0rNg2CYQ3IEhWbN3FJE8QV6ibovdH2DDLRJw"};
+const $=i=>document.getElementById(i),au=$("au");
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf=new Intl.NumberFormat("ar");
+const fmt=s=>{s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0")};
+const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
+let sb,session,eps=[],cur=null,counted={},query="";
+const pub=p=>sb.storage.from("podcast").getPublicUrl(p).data.publicUrl;
+const hue=t=>[...t].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
+const cover=e=>`<div class="cov" style="--h:${hue(e.title)}">${e.cover_path?`<img src="${pub(e.cover_path)}" alt="" loading="lazy">`:esc([...e.title][0]||"ص")}</div>`;
+const date=d=>new Date(d).toLocaleDateString("ar",{year:"numeric",month:"long",day:"numeric"});
+
+async function load(){
+  const{data,error}=await sb.from("podcast_episodes").select("*").order("created_at",{ascending:false});
+  if(error){$("list").innerHTML=`<p class="empty">تعذّر تحميل الحلقات: ${esc(error.message)}<br>تأكد من تشغيل setup.sql.</p>`;return}
+  eps=data;draw();
+  const id=location.hash.startsWith("#ep-")&&location.hash.slice(4);
+  const e=eps.find(x=>x.id===id);if(e)select(e,false);
+}
+function draw(){
+  const h=eps[0];
+  $("hero").innerHTML=h?`<div class="hero">${cover(h)}<div><div class="tag">أحدث حلقة</div><h1>${esc(h.title)}</h1><p>${esc(h.description)}</p>
+    <div class="row" style="justify-content:flex-start"><button class="btn p" id="hp">▶ استمع الآن</button><span class="meta">${date(h.created_at)} · ${fmt(h.duration_sec)} · ${nf.format(h.plays)} استماع</span></div></div></div>`:"";
+  if(h)$("hp").onclick=()=>select(h,true);
+  const l=eps.filter(e=>!query||(e.title+e.description).toLowerCase().includes(query.toLowerCase()));
+  $("list").innerHTML=l.map(e=>`<div class="ep ${cur&&cur.id===e.id?"now":""}" data-id="${e.id}">${cover(e)}<div><h3>${esc(e.title)}</h3><div class="meta">${date(e.created_at)} · ${fmt(e.duration_sec)} · ${nf.format(e.plays)} استماع</div></div><button class="pb" aria-label="تشغيل">▶</button></div>`).join("")||`<p class="empty">${eps.length?"لا نتائج":"لا توجد حلقات بعد."}</p>`;
+}
+$("list").onclick=e=>{const r=e.target.closest(".ep");if(r)select(eps.find(x=>x.id===r.dataset.id),true)};
+$("q").oninput=e=>{query=e.target.value;draw()};
+
+function select(e,play){
+  if(!cur||cur.id!==e.id){cur=e;au.src=pub(e.audio_path);const p=+store.get("sawt.pos."+e.id);au.onloadedmetadata=()=>{if(p>0&&p<au.duration-5)au.currentTime=p};}
+  $("pl").hidden=false;$("pt").textContent=e.title;history.replaceState(null,"","#ep-"+e.id);draw();
+  if(play){au.play().catch(()=>{});if(!counted[e.id]){counted[e.id]=1;sb.rpc("increment_plays",{ep:e.id})}}
+}
+$("pp").onclick=()=>au.paused?au.play():au.pause();
+au.onplay=()=>$("pp").textContent="⏸";au.onpause=()=>$("pp").textContent="▶";
+let lastSave=0;
+au.ontimeupdate=()=>{if(!au.duration)return;$("seek").value=au.currentTime/au.duration*100;$("tc").textContent=fmt(au.currentTime);$("td").textContent=fmt(au.duration);
+  if(cur&&Date.now()-lastSave>4000){lastSave=Date.now();store.set("sawt.pos."+cur.id,au.currentTime)}};
+$("seek").oninput=e=>{if(au.duration)au.currentTime=e.target.value/100*au.duration};
+$("b15").onclick=()=>au.currentTime-=15;$("f30").onclick=()=>au.currentTime+=30;
+$("spd").onclick=()=>{const s=[1,1.25,1.5,2],n=s[(s.indexOf(au.playbackRate)+1)%4];au.playbackRate=n;$("spd").textContent=n+"×"};
+$("share").onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$("share").textContent="✓"}catch{}setTimeout(()=>$("share").textContent="🔗",1200)};
+
+/* المشرف */
+const dlg=$("dlg");
+function showAdmin(){$("lf").hidden=!!session;$("uf").hidden=!session;$("adminBtn").textContent=session?"لوحة المشرف":"دخول المشرف";
+  $("al").innerHTML=session?eps.map(e=>`<div class="adm"><span>${esc(e.title)}</span><button class="btn sm" type="button" data-del="${e.id}">حذف</button></div>`).join(""):""}
+$("adminBtn").onclick=()=>{showAdmin();dlg.showModal()};
+dlg.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>dlg.close());
+$("lf").onsubmit=async e=>{e.preventDefault();const{error}=await sb.auth.signInWithPassword({email:$("em").value,password:$("pw").value});$("lm").textContent=error?error.message:""};
+$("out").onclick=()=>{sb.auth.signOut();dlg.close()};
+function duration(f){return new Promise(ok=>{const a=new Audio(URL.createObjectURL(f));a.onloadedmetadata=()=>ok(Math.round(a.duration)||0);a.onerror=()=>ok(0)})}
+$("uf").onsubmit=async e=>{e.preventDefault();const m=$("um"),a=$("ua").files[0],c=$("uc").files[0];if(!a)return;
+  $("ub").disabled=true;m.textContent="جارٍ الرفع… لا تغلق الصفحة";
+  const id=crypto.randomUUID(),ext=f=>(f.name.split(".").pop()||"bin").toLowerCase();
+  const ap=`audio/${id}.${ext(a)}`,cp=c?`covers/${id}.${ext(c)}`:null;
+  let r=await sb.storage.from("podcast").upload(ap,a,{contentType:a.type});
+  if(!r.error&&c)r=await sb.storage.from("podcast").upload(cp,c,{contentType:c.type});
+  if(!r.error)r=await sb.from("podcast_episodes").insert({id,title:$("ut").value.trim(),description:$("ud").value.trim(),audio_path:ap,cover_path:cp,duration_sec:await duration(a)});
+  $("ub").disabled=false;
+  if(r.error){m.textContent="خطأ: "+r.error.message;return}
+  $("uf").reset();m.textContent="تم النشر ✓";await load();showAdmin()};
+$("al").onclick=async e=>{const id=e.target.dataset.del;if(!id||!confirm("حذف الحلقة؟"))return;const x=eps.find(v=>v.id===id);
+  await sb.storage.from("podcast").remove([x.audio_path,x.cover_path].filter(Boolean));await sb.from("podcast_episodes").delete().eq("id",id);
+  if(cur&&cur.id===id){au.pause();$("pl").hidden=true;cur=null}await load();showAdmin()};
+
+if(!CONFIG.URL||CONFIG.URL.startsWith("__")||!window.supabase)$("list").innerHTML='<p class="empty">ضع رابط Supabase والمفتاح في CONFIG أعلى السكربت.</p>';
+else{sb=supabase.createClient(CONFIG.URL,CONFIG.KEY);
+  sb.auth.getSession().then(r=>{session=r.data.session});
+  sb.auth.onAuthStateChange((_e,s)=>{session=s;showAdmin()});load()}
+</script>
+</body>
+</html>
